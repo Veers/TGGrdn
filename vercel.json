@@ -1,0 +1,18 @@
+{
+  "rewrites": [
+    {
+      "source": "/((?!tonconnect-manifest\\.json).*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/tonconnect-manifest.json",
+      "headers": [
+        { "key": "Content-Type", "value": "application/json" },
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Cache-Control", "value": "no-cache" }
+      ]
+    }
+  ]
+}

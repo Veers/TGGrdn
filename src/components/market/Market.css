@@ -1,0 +1,446 @@
+/* ----- Market (Биржа) ----- */
+.market__balance {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.market__balance-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius);
+  font-size: var(--text-md);
+  font-weight: var(--font-semibold);
+  background: var(--tg-theme-secondary-bg-color);
+  color: var(--tg-theme-text-color);
+}
+
+/* Стакан */
+.market__orderbook {
+  margin-bottom: var(--space-4);
+  padding: var(--space-4);
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--blur-md));
+  -webkit-backdrop-filter: blur(var(--blur-md));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+}
+
+.market__orderbook-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.market__orderbook-title {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--tg-theme-hint-color);
+}
+
+.market__orderbook-rate {
+  font-size: var(--text-md);
+  font-weight: var(--font-semibold);
+  color: var(--tg-theme-text-color);
+}
+
+.market__orderbook-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.market__orderbook-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius);
+  font-size: var(--text-sm);
+}
+
+.market__orderbook-row--buy {
+  background: rgba(74, 124, 89, 0.15);
+  border: 1px solid rgba(74, 124, 89, 0.4);
+}
+
+.market__orderbook-row--sell {
+  background: rgba(192, 57, 43, 0.1);
+  border: 1px solid rgba(192, 57, 43, 0.3);
+}
+
+.market__orderbook-label {
+  color: var(--tg-theme-hint-color);
+}
+
+.market__orderbook-value {
+  font-weight: var(--font-semibold);
+  color: var(--tg-theme-text-color);
+}
+
+/* Таблица стакана: спрос / предложение */
+.market__orderbook-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.market__orderbook-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.market__orderbook-th {
+  padding: var(--space-2) var(--space-3);
+  font-weight: var(--font-semibold);
+  color: var(--tg-theme-hint-color);
+  text-align: left;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.market__orderbook-th--bid {
+  color: rgba(74, 124, 89, 0.95);
+}
+
+.market__orderbook-th--ask {
+  color: rgba(192, 57, 43, 0.95);
+}
+
+.market__orderbook-subhead .market__orderbook-th {
+  font-weight: 500;
+  font-size: 0.75rem;
+  padding-top: 0;
+}
+
+.market__orderbook-tr {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.market__orderbook-td {
+  padding: var(--space-2) var(--space-3);
+  vertical-align: middle;
+}
+
+.market__orderbook-td--bid {
+  background: rgba(74, 124, 89, 0.08);
+}
+
+.market__orderbook-td--ask {
+  background: rgba(192, 57, 43, 0.06);
+}
+
+.market__orderbook-price {
+  font-weight: var(--font-semibold);
+  color: var(--tg-theme-text-color);
+  margin-right: var(--space-2);
+}
+
+.market__orderbook-volume {
+  color: var(--tg-theme-hint-color);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Окно покупки/продажи */
+.market__trade {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.market__trade-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius);
+  background: var(--tg-theme-bg-color);
+  border: 1px solid var(--glass-border);
+}
+
+.market__trade-block--buy {
+  border-color: rgba(74, 124, 89, 0.4);
+}
+
+.market__trade-block--sell {
+  border-color: rgba(192, 57, 43, 0.3);
+}
+
+.market__trade-block-title {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--tg-theme-hint-color);
+}
+
+.market__trade-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--tg-theme-secondary-bg-color);
+  width: 100%;
+}
+
+.market__trade-stepper-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  background: var(--tg-theme-bg-color);
+  color: var(--tg-theme-text-color);
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s, opacity 0.2s;
+}
+
+.market__trade-stepper-btn:hover:not(:disabled) {
+  background: var(--tg-theme-hint-color);
+}
+
+.market__trade-stepper-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.market__trade-stepper-value {
+  flex: 1;
+  padding: 0 var(--space-3);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  text-align: center;
+  color: var(--tg-theme-text-color);
+}
+
+.market__trade-btn {
+  padding: var(--space-4) var(--space-6);
+  border: none;
+  border-radius: var(--radius);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+  transition: transform var(--transition-base), box-shadow var(--transition-base);
+}
+
+.market__trade-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.market__trade-btn--buy {
+  background: var(--gradient-button);
+  color: var(--tg-theme-button-text-color);
+  box-shadow: var(--shadow-md);
+}
+
+.market__trade-btn--buy:hover:not(:disabled) {
+  background: var(--gradient-button-hover);
+  transform: scale(var(--hover-scale));
+  box-shadow: var(--shadow-lg);
+}
+
+.market__trade-btn--sell {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--blur-sm));
+  -webkit-backdrop-filter: blur(var(--blur-sm));
+  color: var(--tg-theme-text-color);
+  border: 1px solid var(--glass-border);
+}
+
+.market__trade-btn--sell:hover:not(:disabled) {
+  border-color: var(--tg-theme-text-color);
+  transform: scale(var(--hover-scale));
+  box-shadow: var(--shadow-md);
+}
+
+.market__trade-btn:not(:disabled):active {
+  transform: scale(var(--active-scale));
+}
+
+.market__trade-hint {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  color: var(--tg-theme-hint-color);
+}
+
+/* График курса */
+.market__chart {
+  margin-bottom: var(--space-4);
+  padding: var(--space-4);
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--blur-md));
+  -webkit-backdrop-filter: blur(var(--blur-md));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+}
+
+.market__chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.market__chart-title {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--tg-theme-hint-color);
+}
+
+.market__chart-rate {
+  font-size: var(--text-md);
+  font-weight: var(--font-semibold);
+  color: var(--tg-theme-text-color);
+}
+
+.market__chart-canvas {
+  width: 100%;
+  height: 120px;
+  display: block;
+}
+
+.market__chart-placeholder {
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--tg-theme-hint-color);
+  font-size: var(--text-sm);
+}
+
+/* Контейнер для нижней секции биржи */
+.exchange-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.exchange-bottom .market__orderbook,
+.exchange-bottom .market__chart {
+  margin-bottom: 0;
+}
+
+/* Нижняя панель биржи: открытые ордера / история */
+.exchange-bottom-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.exchange-bottom-panel__tabs {
+  flex-shrink: 0;
+  display: flex;
+  gap: var(--space-1);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--glass-border);
+  margin-bottom: var(--space-3);
+}
+
+.exchange-bottom-panel__tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: var(--space-3) var(--space-4);
+  border: none;
+  border-radius: var(--radius);
+  background: var(--glass-bg);
+  color: var(--tg-theme-hint-color);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  transition: background var(--transition-base), color var(--transition-base);
+}
+
+.exchange-bottom-panel__tab:hover {
+  background: var(--glass-bg-light);
+  color: var(--tg-theme-text-color);
+}
+
+.exchange-bottom-panel__tab--active {
+  background: var(--tg-theme-secondary-bg-color);
+  color: var(--tg-theme-text-color);
+}
+
+.exchange-bottom-panel__tab-icon {
+  font-size: var(--text-lg);
+  line-height: 1;
+}
+
+.exchange-bottom-panel__content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.exchange-bottom-panel__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.exchange-bottom-panel__empty {
+  margin: 0;
+  padding: var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--tg-theme-hint-color);
+  text-align: center;
+}
+
+.exchange-bottom-panel__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius);
+  font-size: var(--text-sm);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+}
+
+.exchange-bottom-panel__row--buy {
+  border-left: 3px solid rgba(74, 124, 89, 0.8);
+}
+
+.exchange-bottom-panel__row--sell {
+  border-left: 3px solid rgba(192, 57, 43, 0.8);
+}
+
+.exchange-bottom-panel__row-type {
+  font-weight: var(--font-semibold);
+  min-width: 4.5rem;
+}
+
+.exchange-bottom-panel__row-amount {
+  color: var(--tg-theme-text-color);
+}
+
+.exchange-bottom-panel__row-rate,
+.exchange-bottom-panel__row-total,
+.exchange-bottom-panel__row-price-label {
+  color: var(--tg-theme-hint-color);
+  font-size: var(--text-xs);
+}
+
+.exchange-bottom-panel__row-date {
+  margin-left: auto;
+  font-size: var(--text-xs);
+  color: var(--tg-theme-hint-color);
+}
