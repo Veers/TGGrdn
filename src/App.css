@@ -6,8 +6,8 @@
   height: 100%;
   height: 100dvh;
   overflow: hidden;
-  padding-left: var(--space-5);
-  padding-right: 0;
+  padding-left: max(var(--space-5), env(safe-area-inset-left));
+  padding-right: max(var(--space-5), env(safe-area-inset-right));
   padding-bottom: max(var(--space-5), var(--safe-bottom));
   padding-top: var(--space-5);
   box-sizing: border-box;
@@ -2066,6 +2066,8 @@
   border-radius: var(--radius-lg);
   padding: var(--space-8);
   max-width: 320px;
+  max-height: 85vh;
+  overflow-y: auto;
   width: 100%;
   box-shadow: var(--shadow-xl);
   animation: tutorial-card-enter var(--transition-slow) ease;
@@ -2083,14 +2085,28 @@
 }
 
 .tutorial-overlay__title {
-  margin: 0 0 var(--space-6);
+  margin: 0 0 var(--space-4);
   font-size: var(--text-xl);
   font-weight: var(--font-semibold);
   letter-spacing: var(--letter-spacing-tight);
 }
 
+.tutorial-overlay__intro {
+  margin: 0 0 var(--space-6);
+  line-height: 1.5;
+  font-size: var(--text-base);
+  color: var(--tg-theme-text-color);
+}
+
+.tutorial-overlay__subtitle {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--tg-theme-text-color);
+}
+
 .tutorial-overlay__steps {
-  margin: 0 0 var(--space-8);
+  margin: 0 0 var(--space-6);
   padding-left: var(--space-8);
   line-height: 1.6;
   font-size: var(--text-base);
@@ -2099,6 +2115,20 @@
 
 .tutorial-overlay__steps li {
   margin-bottom: var(--space-2);
+}
+
+.tutorial-overlay__buttons-desc {
+  margin: 0 0 var(--space-8);
+  padding-left: var(--space-8);
+  line-height: 1.55;
+  font-size: var(--text-sm);
+  color: var(--tg-theme-text-color);
+  list-style: none;
+}
+
+.tutorial-overlay__buttons-desc li {
+  margin-bottom: var(--space-3);
+  padding-left: 0;
 }
 
 .tutorial-overlay__btn {

@@ -128,7 +128,7 @@ function FarmGame() {
                 aria-label={seedPricesOpen ? "Свернуть цены" : "Показать цены на семена"}
               >
                 <span className="market-wrap__toggle-text">
-                  {seedPricesOpen ? "◀" : "Цены ▶"}
+                  {seedPricesOpen ? "◀" : "🪙 ▶"}
                 </span>
               </button>
             </aside>
