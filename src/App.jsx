@@ -116,7 +116,7 @@ function FarmGame() {
           </aside>
         )}
       </div>
-      <FieldMachineryBar />
+      {tab !== "exchange" && <FieldMachineryBar />}
       <ExpandFarmBar showFarm={tab !== "exchange"} />
       <div className={`app__bottom ${tab === "garage" && hasMachinery ? "app__bottom--garage-open" : ""}`}>
         <div className="app__bottom-scroll">

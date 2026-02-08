@@ -61,6 +61,38 @@
   color: var(--tg-theme-text-color);
 }
 
+.shop-purchase-dialog__step-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.shop-purchase-dialog__step-btn {
+  min-width: 52px;
+  height: 32px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--tg-theme-hint-color);
+  border-radius: var(--radius);
+  background: var(--tg-theme-secondary-bg-color);
+  color: var(--tg-theme-text-color);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    opacity 0.2s;
+}
+
+.shop-purchase-dialog__step-btn:hover:not(:disabled) {
+  background: var(--tg-theme-hint-color);
+}
+
+.shop-purchase-dialog__step-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .shop-purchase-dialog__total {
   margin: 0;
   font-size: var(--text-base);

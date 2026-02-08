@@ -52,8 +52,13 @@ export function Plot({ index }) {
         animate={{ opacity: 1 }}
         whileTap={{ scale: 0.97 }}
         transition={{ duration: 0.1 }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
       >
-        <span className="plot__placeholder">+</span>
+        {/* Пустой квадрат без содержимого */}
       </motion.div>
     );
   }
@@ -96,12 +101,16 @@ export function Plot({ index }) {
       animate={{ opacity: 1 }}
       whileTap={{ scale: 0.97 }}
       transition={{ duration: 0.1 }}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
     >
-      <span className="plot__emoji">{seed.emoji}</span>
+      {/* Пустой квадрат без содержимого */}
       {phase === "growing" && (
         <>
           <div className="plot__progress" style={{ "--progress": progress }} />
-          <span className="plot__timer">{remainingSeconds} с</span>
           {hasCareActions && (
             <div className="plot__actions" onClick={(e) => e.stopPropagation()}>
               {needsWeeding && (
@@ -141,16 +150,12 @@ export function Plot({ index }) {
           )}
         </>
       )}
-      {phase === "ready" && <span className="plot__label">Собрать</span>}
       {isCollecting && (
         <>
           <div
             className="plot__progress plot__progress--collecting"
             style={{ "--progress": collectionProgress }}
           />
-          <span className="plot__timer">
-            Сбор: {collectionRemainingSeconds} с
-          </span>
         </>
       )}
     </motion.div>

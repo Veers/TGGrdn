@@ -10,7 +10,8 @@ export const MAX_EARNINGS_HISTORY = 100;
 export const DEFAULT_HARVEST_SECONDS = 4;
 
 export const CRYPTO_TICKER = "CRX";
-export const CRYPTO_BASE_RATE = 10;
+export const CRYPTO_RATE_MIN = 1.5;
+export const CRYPTO_RATE_MAX = 33.5;
 export const CRYPTO_SPREAD = 2;
 export const CRYPTO_RATE_PERIOD_MS = 45000;
 
@@ -77,9 +78,13 @@ export function defaultBarn() {
   return Object.fromEntries(SEED_IDS.map((id) => [id, 0]));
 }
 
-/** Одна единица техники: топливо и целостность 0–100 */
+/** Одна единица техники: топливо и целостность 0–100, время последнего действия */
 export function defaultUnit() {
-  return { fuel: MACHINERY_MAX_FUEL, integrity: MACHINERY_MAX_INTEGRITY };
+  return { 
+    fuel: MACHINERY_MAX_FUEL, 
+    integrity: MACHINERY_MAX_INTEGRITY,
+    lastActionTime: null 
+  };
 }
 
 export function defaultGarage() {
@@ -91,9 +96,12 @@ export function defaultDeployedMachinery() {
 }
 
 function normalizeUnit(u) {
+  const rawFuel = Number(u?.fuel);
+  const rawIntegrity = Number(u?.integrity);
   return {
-    fuel: Math.min(MACHINERY_MAX_FUEL, Math.max(0, Number(u?.fuel) ?? MACHINERY_MAX_FUEL)),
-    integrity: Math.min(MACHINERY_MAX_INTEGRITY, Math.max(0, Number(u?.integrity) ?? MACHINERY_MAX_INTEGRITY)),
+    fuel: Math.min(MACHINERY_MAX_FUEL, Math.max(0, Number.isFinite(rawFuel) ? rawFuel : MACHINERY_MAX_FUEL)),
+    integrity: Math.min(MACHINERY_MAX_INTEGRITY, Math.max(0, Number.isFinite(rawIntegrity) ? rawIntegrity : MACHINERY_MAX_INTEGRITY)),
+    lastActionTime: u?.lastActionTime != null ? u.lastActionTime : null,
   };
 }
 
@@ -149,7 +157,9 @@ export function loadSave() {
     const openOrders = Array.isArray(data.openOrders) ? data.openOrders : [];
     const earningsHistory = Array.isArray(data.earningsHistory) ? data.earningsHistory.slice(-MAX_EARNINGS_HISTORY) : [];
     return { ...data, warehouse, barn, garage, deployedMachinery, tradeHistory, openOrders, earningsHistory, farmCols: cols, farmRows: rows, grid };
-  } catch (_) {}
+  } catch {
+    // ignore load errors
+  }
   return null;
 }
 
@@ -177,34 +187,55 @@ export function saveGame(coins, grid, warehouse, barn, garage, deployedMachinery
         earningsHistory: earnings,
       }),
     );
-  } catch (_) {}
+  } catch {
+    // ignore save errors
+  }
 }
 
-/** Расчёт курсов криптовалюты */
+/** Расчёт курса в произвольный момент (для исторического графика) */
+function getMarketRateAtTimestamp(timestampMs) {
+  const t = Math.floor(timestampMs / CRYPTO_RATE_PERIOD_MS);
+  const wave = Math.sin(t * 0.7) * 0.5 + Math.sin(t * 1.3) * 0.5; // [-1, 1]
+  const center = (CRYPTO_RATE_MIN + CRYPTO_RATE_MAX) / 2;
+  const halfRange = (CRYPTO_RATE_MAX - CRYPTO_RATE_MIN) / 2;
+  const marketRate = Math.max(CRYPTO_RATE_MIN, Math.min(CRYPTO_RATE_MAX, center + halfRange * wave));
+  return Math.round(marketRate * 10) / 10;
+}
+
+/** Расчёт курсов криптовалюты (минимум CRYPTO_RATE_MIN, максимум CRYPTO_RATE_MAX) */
 export function getCryptoRates() {
-  const t = Math.floor(Date.now() / CRYPTO_RATE_PERIOD_MS);
-  const wave = Math.sin(t * 0.7) * 0.15 + Math.sin(t * 1.3) * 0.1;
-  const marketRate = CRYPTO_BASE_RATE * (1 + wave);
+  const now = Date.now();
+  const marketRate = getMarketRateAtTimestamp(now);
   const buyRate = Math.round(marketRate + CRYPTO_SPREAD / 2);
   const sellRate = Math.max(1, Math.round(marketRate - CRYPTO_SPREAD / 2));
-  return { buyRate, sellRate, marketRate: Math.round(marketRate * 10) / 10 };
+  return { buyRate, sellRate, marketRate };
+}
+
+/** Курс на момент времени (для графика истории) */
+export function getCryptoRatesAt(timestampMs) {
+  const marketRate = getMarketRateAtTimestamp(timestampMs);
+  const buyRate = Math.round(marketRate + CRYPTO_SPREAD / 2);
+  const sellRate = Math.max(1, Math.round(marketRate - CRYPTO_SPREAD / 2));
+  return { buyRate, sellRate, marketRate };
 }
 
 /**
  * Тик сеялок: проверяет условия и возвращает изменения состояния
- * @param {number} tick - текущий тик игры
  * @param {Array} grid - сетка поля
  * @param {Object} warehouse - склад семян
  * @param {Object} deployedMachinery - техника на поле
  * @returns {Object|null} Изменения состояния или null если ничего не делать
  */
-export function tickSeeders(tick, grid, warehouse, deployedMachinery) {
-  if (tick % SEEDER_TICK_INTERVAL !== 0) return null;
+export function tickSeeders(grid, warehouse, deployedMachinery) {
+  const now = Date.now();
+  const actionInterval = SEEDER_TICK_INTERVAL * GAME_TICK_INTERVAL_MS;
   
   const seeders = deployedMachinery.seeder ?? [];
-  const workerIndex = seeders.findIndex(
-    (u) => (u.fuel ?? 0) > 0 && (u.integrity ?? 0) > 0,
-  );
+  const workerIndex = seeders.findIndex((u) => {
+    if ((u.fuel ?? 0) <= 0 || (u.integrity ?? 0) <= 0) return false;
+    const timeSinceLastAction = u.lastActionTime ? now - u.lastActionTime : Infinity;
+    return timeSinceLastAction >= actionInterval;
+  });
   if (workerIndex < 0) return null;
   
   const emptyIndex = grid.findIndex((c) => c === null);
@@ -222,6 +253,7 @@ export function tickSeeders(tick, grid, warehouse, deployedMachinery) {
         ...u,
         fuel: Math.max(0, (u.fuel ?? 0) - SEEDER_FUEL_PER_PLANT),
         integrity: Math.max(0, (u.integrity ?? 0) - SEEDER_INTEGRITY_PER_PLANT),
+        lastActionTime: now,
       };
       return { ...d, seeder: list };
     },
@@ -230,18 +262,20 @@ export function tickSeeders(tick, grid, warehouse, deployedMachinery) {
 
 /**
  * Тик культиваторов: убирает сорняки с грядок
- * @param {number} tick - текущий тик игры
  * @param {Array} grid - сетка поля
  * @param {Object} deployedMachinery - техника на поле
  * @returns {Object|null} Изменения состояния или null если ничего не делать
  */
-export function tickCultivators(tick, grid, deployedMachinery) {
-  if (tick % CULTIVATOR_TICK_INTERVAL !== 0) return null;
+export function tickCultivators(grid, deployedMachinery) {
+  const now = Date.now();
+  const actionInterval = CULTIVATOR_TICK_INTERVAL * GAME_TICK_INTERVAL_MS;
   
   const cultivators = deployedMachinery.cultivator ?? [];
-  const workerIndex = cultivators.findIndex(
-    (u) => (u.fuel ?? 0) > 0 && (u.integrity ?? 0) > 0,
-  );
+  const workerIndex = cultivators.findIndex((u) => {
+    if ((u.fuel ?? 0) <= 0 || (u.integrity ?? 0) <= 0) return false;
+    const timeSinceLastAction = u.lastActionTime ? now - u.lastActionTime : Infinity;
+    return timeSinceLastAction >= actionInterval;
+  });
   if (workerIndex < 0) return null;
   
   // Найти грядку с сорняками (нужно прополоть, но еще не прополота)
@@ -251,13 +285,13 @@ export function tickCultivators(tick, grid, deployedMachinery) {
     if (!seed) return false;
     const g = seed.growthSeconds;
     const seg = g / 4;
-    const t = (Date.now() - cell.plantedAt) / 1000;
+    const t = (now - cell.plantedAt) / 1000;
     
     let effectiveElapsed;
     if (!cell.fertilizedAt) {
       effectiveElapsed = Math.min(t, seg);
     } else {
-      const sinceFertilized = (Date.now() - cell.fertilizedAt) / 1000;
+      const sinceFertilized = (now - cell.fertilizedAt) / 1000;
       effectiveElapsed = seg + Math.min(sinceFertilized, seg);
     }
     const growthProgress = Math.min(1, effectiveElapsed / g);
@@ -275,6 +309,7 @@ export function tickCultivators(tick, grid, deployedMachinery) {
         ...u,
         fuel: Math.max(0, (u.fuel ?? 0) - CULTIVATOR_FUEL_PER_ACTION),
         integrity: Math.max(0, (u.integrity ?? 0) - CULTIVATOR_INTEGRITY_PER_ACTION),
+        lastActionTime: now,
       };
       return { ...d, cultivator: list };
     },
@@ -283,18 +318,20 @@ export function tickCultivators(tick, grid, deployedMachinery) {
 
 /**
  * Тик разбрасывателей удобрений: вносит удобрения на грядки
- * @param {number} tick - текущий тик игры
  * @param {Array} grid - сетка поля
  * @param {Object} deployedMachinery - техника на поле
  * @returns {Object|null} Изменения состояния или null если ничего не делать
  */
-export function tickFertilizerSpreaders(tick, grid, deployedMachinery) {
-  if (tick % FERTILIZER_SPREADER_TICK_INTERVAL !== 0) return null;
+export function tickFertilizerSpreaders(grid, deployedMachinery) {
+  const now = Date.now();
+  const actionInterval = FERTILIZER_SPREADER_TICK_INTERVAL * GAME_TICK_INTERVAL_MS;
   
   const spreaders = deployedMachinery.fertilizer_spreader ?? [];
-  const workerIndex = spreaders.findIndex(
-    (u) => (u.fuel ?? 0) > 0 && (u.integrity ?? 0) > 0,
-  );
+  const workerIndex = spreaders.findIndex((u) => {
+    if ((u.fuel ?? 0) <= 0 || (u.integrity ?? 0) <= 0) return false;
+    const timeSinceLastAction = u.lastActionTime ? now - u.lastActionTime : Infinity;
+    return timeSinceLastAction >= actionInterval;
+  });
   if (workerIndex < 0) return null;
   
   // Найти грядку, которую нужно удобрить
@@ -303,8 +340,7 @@ export function tickFertilizerSpreaders(tick, grid, deployedMachinery) {
     const seed = SEEDS[cell.seedId];
     if (!seed) return false;
     const g = seed.growthSeconds;
-    const seg = g / 4;
-    const t = (Date.now() - cell.plantedAt) / 1000;
+    const t = (now - cell.plantedAt) / 1000;
     const growthProgress = Math.min(1, t / g);
     return growthProgress >= 1 / 4 && !cell.fertilizedAt;
   });
@@ -320,6 +356,7 @@ export function tickFertilizerSpreaders(tick, grid, deployedMachinery) {
         ...u,
         fuel: Math.max(0, (u.fuel ?? 0) - FERTILIZER_SPREADER_FUEL_PER_ACTION),
         integrity: Math.max(0, (u.integrity ?? 0) - FERTILIZER_SPREADER_INTEGRITY_PER_ACTION),
+        lastActionTime: now,
       };
       return { ...d, fertilizer_spreader: list };
     },
@@ -328,18 +365,20 @@ export function tickFertilizerSpreaders(tick, grid, deployedMachinery) {
 
 /**
  * Тик дождевателей: поливает грядки
- * @param {number} tick - текущий тик игры
  * @param {Array} grid - сетка поля
  * @param {Object} deployedMachinery - техника на поле
  * @returns {Object|null} Изменения состояния или null если ничего не делать
  */
-export function tickIrrigators(tick, grid, deployedMachinery) {
-  if (tick % IRRIGATOR_TICK_INTERVAL !== 0) return null;
+export function tickIrrigators(grid, deployedMachinery) {
+  const now = Date.now();
+  const actionInterval = IRRIGATOR_TICK_INTERVAL * GAME_TICK_INTERVAL_MS;
   
   const irrigators = deployedMachinery.irrigator ?? [];
-  const workerIndex = irrigators.findIndex(
-    (u) => (u.fuel ?? 0) > 0 && (u.integrity ?? 0) > 0,
-  );
+  const workerIndex = irrigators.findIndex((u) => {
+    if ((u.fuel ?? 0) <= 0 || (u.integrity ?? 0) <= 0) return false;
+    const timeSinceLastAction = u.lastActionTime ? now - u.lastActionTime : Infinity;
+    return timeSinceLastAction >= actionInterval;
+  });
   if (workerIndex < 0) return null;
   
   // Найти грядку, которую нужно полить
@@ -349,16 +388,16 @@ export function tickIrrigators(tick, grid, deployedMachinery) {
     if (!seed) return false;
     const g = seed.growthSeconds;
     const seg = g / 4;
-    const t = (Date.now() - cell.plantedAt) / 1000;
+    const t = (now - cell.plantedAt) / 1000;
     
     let effectiveElapsed;
     if (!cell.fertilizedAt) {
       effectiveElapsed = Math.min(t, seg);
     } else if (!cell.weededAt) {
-      const sinceFertilized = (Date.now() - cell.fertilizedAt) / 1000;
+      const sinceFertilized = (now - cell.fertilizedAt) / 1000;
       effectiveElapsed = seg + Math.min(sinceFertilized, seg);
     } else {
-      const sinceWeeded = (Date.now() - cell.weededAt) / 1000;
+      const sinceWeeded = (now - cell.weededAt) / 1000;
       effectiveElapsed = 2 * seg + Math.min(sinceWeeded, seg);
     }
     const growthProgress = Math.min(1, effectiveElapsed / g);
@@ -376,6 +415,7 @@ export function tickIrrigators(tick, grid, deployedMachinery) {
         ...u,
         fuel: Math.max(0, (u.fuel ?? 0) - IRRIGATOR_FUEL_PER_ACTION),
         integrity: Math.max(0, (u.integrity ?? 0) - IRRIGATOR_INTEGRITY_PER_ACTION),
+        lastActionTime: now,
       };
       return { ...d, irrigator: list };
     },
@@ -384,18 +424,20 @@ export function tickIrrigators(tick, grid, deployedMachinery) {
 
 /**
  * Тик комбайнов: начинает сбор урожая с готовых грядок
- * @param {number} tick - текущий тик игры
  * @param {Array} grid - сетка поля
  * @param {Object} deployedMachinery - техника на поле
  * @returns {Object|null} Изменения состояния или null если ничего не делать
  */
-export function tickHarvesters(tick, grid, deployedMachinery) {
-  if (tick % HARVESTER_TICK_INTERVAL !== 0) return null;
+export function tickHarvesters(grid, deployedMachinery) {
+  const now = Date.now();
+  const actionInterval = HARVESTER_TICK_INTERVAL * GAME_TICK_INTERVAL_MS;
   
   const harvesters = deployedMachinery.harvester ?? [];
-  const workerIndex = harvesters.findIndex(
-    (u) => (u.fuel ?? 0) > 0 && (u.integrity ?? 0) > 0,
-  );
+  const workerIndex = harvesters.findIndex((u) => {
+    if ((u.fuel ?? 0) <= 0 || (u.integrity ?? 0) <= 0) return false;
+    const timeSinceLastAction = u.lastActionTime ? now - u.lastActionTime : Infinity;
+    return timeSinceLastAction >= actionInterval;
+  });
   if (workerIndex < 0) return null;
   
   // Найти готовую грядку (урожай готов, но сбор еще не начат)
@@ -405,19 +447,19 @@ export function tickHarvesters(tick, grid, deployedMachinery) {
     if (!seed) return false;
     const g = seed.growthSeconds;
     const seg = g / 4;
-    const t = (Date.now() - cell.plantedAt) / 1000;
+    const t = (now - cell.plantedAt) / 1000;
     
     let effectiveElapsed;
     if (!cell.fertilizedAt) {
       effectiveElapsed = Math.min(t, seg);
     } else if (!cell.weededAt) {
-      const sinceFertilized = (Date.now() - cell.fertilizedAt) / 1000;
+      const sinceFertilized = (now - cell.fertilizedAt) / 1000;
       effectiveElapsed = seg + Math.min(sinceFertilized, seg);
     } else if (!cell.wateredAt) {
-      const sinceWeeded = (Date.now() - cell.weededAt) / 1000;
+      const sinceWeeded = (now - cell.weededAt) / 1000;
       effectiveElapsed = 2 * seg + Math.min(sinceWeeded, seg);
     } else {
-      const sinceWatered = (Date.now() - cell.wateredAt) / 1000;
+      const sinceWatered = (now - cell.wateredAt) / 1000;
       effectiveElapsed = 3 * seg + Math.min(sinceWatered, seg);
     }
     const growthProgress = Math.min(1, effectiveElapsed / g);
@@ -435,6 +477,7 @@ export function tickHarvesters(tick, grid, deployedMachinery) {
         ...u,
         fuel: Math.max(0, (u.fuel ?? 0) - HARVESTER_FUEL_PER_ACTION),
         integrity: Math.max(0, (u.integrity ?? 0) - HARVESTER_INTEGRITY_PER_ACTION),
+        lastActionTime: now,
       };
       return { ...d, harvester: list };
     },
@@ -443,18 +486,20 @@ export function tickHarvesters(tick, grid, deployedMachinery) {
 
 /**
  * Тик грузовиков: продает урожай из амбара
- * @param {number} tick - текущий тик игры
  * @param {Object} barn - амбар с урожаем
  * @param {Object} deployedMachinery - техника на поле
  * @returns {Object|null} Изменения состояния или null если ничего не делать
  */
-export function tickTrucks(tick, barn, deployedMachinery) {
-  if (tick % TRUCK_TICK_INTERVAL !== 0) return null;
+export function tickTrucks(barn, deployedMachinery) {
+  const now = Date.now();
+  const actionInterval = TRUCK_TICK_INTERVAL * GAME_TICK_INTERVAL_MS;
   
   const trucks = deployedMachinery.truck ?? [];
-  const workerIndex = trucks.findIndex(
-    (u) => (u.fuel ?? 0) > 0 && (u.integrity ?? 0) > 0,
-  );
+  const workerIndex = trucks.findIndex((u) => {
+    if ((u.fuel ?? 0) <= 0 || (u.integrity ?? 0) <= 0) return false;
+    const timeSinceLastAction = u.lastActionTime ? now - u.lastActionTime : Infinity;
+    return timeSinceLastAction >= actionInterval;
+  });
   if (workerIndex < 0) return null;
   
   // Найти урожай в амбаре для продажи
@@ -470,8 +515,52 @@ export function tickTrucks(tick, barn, deployedMachinery) {
         ...u,
         fuel: Math.max(0, (u.fuel ?? 0) - TRUCK_FUEL_PER_ACTION),
         integrity: Math.max(0, (u.integrity ?? 0) - TRUCK_INTEGRITY_PER_ACTION),
+        lastActionTime: now,
       };
       return { ...d, truck: list };
     },
   };
+}
+
+/**
+ * Вычисляет минимальное время до следующей проверки техники
+ * @param {Object} deployedMachinery - техника на поле
+ * @returns {number} Время в миллисекундах до следующей проверки (минимум 100мс)
+ */
+export function calculateNextCheckDelay(deployedMachinery) {
+  const now = Date.now();
+  let minDelay = Infinity;
+  
+  const intervals = {
+    seeder: SEEDER_TICK_INTERVAL * GAME_TICK_INTERVAL_MS,
+    cultivator: CULTIVATOR_TICK_INTERVAL * GAME_TICK_INTERVAL_MS,
+    fertilizer_spreader: FERTILIZER_SPREADER_TICK_INTERVAL * GAME_TICK_INTERVAL_MS,
+    irrigator: IRRIGATOR_TICK_INTERVAL * GAME_TICK_INTERVAL_MS,
+    harvester: HARVESTER_TICK_INTERVAL * GAME_TICK_INTERVAL_MS,
+    truck: TRUCK_TICK_INTERVAL * GAME_TICK_INTERVAL_MS,
+  };
+  
+  for (const [machineryId, interval] of Object.entries(intervals)) {
+    const units = deployedMachinery[machineryId] ?? [];
+    for (const unit of units) {
+      if ((unit.fuel ?? 0) <= 0 || (unit.integrity ?? 0) <= 0) continue;
+      
+      const timeSinceLastAction = unit.lastActionTime 
+        ? now - unit.lastActionTime 
+        : 0;
+      const timeUntilNextAction = Math.max(0, interval - timeSinceLastAction);
+      
+      if (timeUntilNextAction < minDelay) {
+        minDelay = timeUntilNextAction;
+      }
+    }
+  }
+  
+  // Если нет техники или все готовы к действию, проверяем через минимальный интервал
+  if (minDelay === Infinity) {
+    return Math.min(...Object.values(intervals));
+  }
+  
+  // Минимальная задержка 100мс для избежания слишком частых проверок
+  return Math.max(100, minDelay);
 }

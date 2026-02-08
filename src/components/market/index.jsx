@@ -11,7 +11,7 @@ export function Exchange() {
   const [rates, setRates] = useState(getCryptoRates());
 
   useEffect(() => {
-    const id = setInterval(() => setRates(getCryptoRates()), 2000);
+    const id = setInterval(() => setRates(getCryptoRates()), 1000);
     return () => clearInterval(id);
   }, []);
 

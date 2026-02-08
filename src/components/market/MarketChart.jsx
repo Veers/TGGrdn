@@ -1,12 +1,25 @@
 import { useState, useEffect, useRef } from 'react';
 import { useGame } from '../../context/GameContext';
+import { getCryptoRatesAt } from '../../data/engine';
 import './Market.css';
+
+const maxPoints = 50;
+
+function buildInitialHistory() {
+  const now = Date.now();
+  const history = [];
+  for (let i = maxPoints - 1; i >= 0; i--) {
+    const time = now - i * 1000;
+    const rates = getCryptoRatesAt(time);
+    history.push({ rate: rates.marketRate, time });
+  }
+  return history;
+}
 
 export function MarketChart({ marketRate, ticker }) {
   const { getCryptoRates } = useGame();
-  const [priceHistory, setPriceHistory] = useState([]);
+  const [priceHistory, setPriceHistory] = useState(() => buildInitialHistory());
   const canvasRef = useRef(null);
-  const maxPoints = 50;
 
   useEffect(() => {
     const updateHistory = () => {
@@ -17,8 +30,7 @@ export function MarketChart({ marketRate, ticker }) {
       });
     };
 
-    updateHistory();
-    const interval = setInterval(updateHistory, 2000);
+    const interval = setInterval(updateHistory, 1000);
     return () => clearInterval(interval);
   }, [getCryptoRates]);
 
@@ -138,7 +150,7 @@ export function MarketChart({ marketRate, ticker }) {
     return (
       <div className="market__chart">
         <div className="market__chart-header">
-          <span className="market__chart-title">График курса</span>
+          <span className="market__chart-title">График курса {ticker}</span>
           <span className="market__chart-rate">
             {marketRate.toFixed(1)} 🪙
           </span>
@@ -153,7 +165,7 @@ export function MarketChart({ marketRate, ticker }) {
   return (
     <div className="market__chart">
       <div className="market__chart-header">
-        <span className="market__chart-title">График курса</span>
+        <span className="market__chart-title">График курса {ticker}</span>
         <span className="market__chart-rate">
           {marketRate.toFixed(1)} 🪙
         </span>

@@ -25,6 +25,16 @@ export function MarketTrade({ buyRate, sellRate, ticker, onBuy, onSell }) {
   const clampBuy = (v) => Math.min(Math.max(1, v), maxBuy || 1);
   const clampSell = (v) => Math.min(Math.max(1, v), maxSell || 1);
 
+  const handleBuyQtyChange = (e) => {
+    const value = parseInt(e.target.value, 10) || 1;
+    setBuyQty(clampBuy(value));
+  };
+
+  const handleSellQtyChange = (e) => {
+    const value = parseInt(e.target.value, 10) || 1;
+    setSellQty(clampSell(value));
+  };
+
   return (
     <div className="market__trade">
       <div className="market__trade-block market__trade-block--buy">
@@ -39,7 +49,15 @@ export function MarketTrade({ buyRate, sellRate, ticker, onBuy, onSell }) {
           >
             −
           </button>
-          <span className="market__trade-stepper-value">{buyQty}</span>
+          <input
+            type="number"
+            className="market__trade-stepper-value market__trade-stepper-input"
+            value={buyQty}
+            onChange={handleBuyQtyChange}
+            min={1}
+            max={maxBuy}
+            aria-label="Количество для покупки"
+          />
           <button
             type="button"
             className="market__trade-stepper-btn"
@@ -72,7 +90,15 @@ export function MarketTrade({ buyRate, sellRate, ticker, onBuy, onSell }) {
           >
             −
           </button>
-          <span className="market__trade-stepper-value">{sellQty}</span>
+          <input
+            type="number"
+            className="market__trade-stepper-value market__trade-stepper-input"
+            value={sellQty}
+            onChange={handleSellQtyChange}
+            min={1}
+            max={maxSell}
+            aria-label="Количество для продажи"
+          />
           <button
             type="button"
             className="market__trade-stepper-btn"
@@ -92,8 +118,6 @@ export function MarketTrade({ buyRate, sellRate, ticker, onBuy, onSell }) {
           Продать {sellQty} {ticker} за 🪙{sellTotal.toLocaleString()}
         </button>
       </div>
-
-      <p className="market__trade-hint">Спред: купить дороже, продать дешевле. Ждите выгодный курс.</p>
     </div>
   );
 }

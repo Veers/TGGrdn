@@ -20,7 +20,6 @@ import {
   INITIAL_ROWS,
   EXPANSIONS,
   EXPAND_COST,
-  GAME_TICK_INTERVAL_MS,
   MAINTENANCE_COST,
   MAINTENANCE_RESTORE,
   defaultGrid,
@@ -38,6 +37,7 @@ import {
   tickIrrigators,
   tickHarvesters,
   tickTrucks,
+  calculateNextCheckDelay,
 } from "../data/engine";
 
 const GameContext = createContext(null);
@@ -63,14 +63,7 @@ export function GameProvider({ children, playSound }) {
   const [tradeHistory, setTradeHistory] = useState(saved?.tradeHistory ?? []);
   const [openOrders] = useState(saved?.openOrders ?? []);
   const [earningsHistory, setEarningsHistory] = useState(saved?.earningsHistory ?? []);
-  const [tick, setTick] = useState(0);
   const prevCoinsRef = useRef(coins);
-
-  /** Игровой таймер: тик каждые 500 мс */
-  useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), GAME_TICK_INTERVAL_MS);
-    return () => clearInterval(id);
-  }, []);
 
   // Track earnings history - use ref to avoid synchronous setState in effect
   useEffect(() => {
@@ -235,186 +228,137 @@ export function GameProvider({ children, playSound }) {
     [warehouse, playSound],
   );
 
-  /** Тик техники: сеялки на поле сажают семена с склада в пустые клетки, расходуют топливо и целостность */
+  /** Объединенный тик техники: проверяет все типы техники и выполняет действия */
   useEffect(() => {
-    const result = tickSeeders(tick, grid, warehouse, deployedMachinery);
-    if (!result) return;
+    let timeoutId;
     
-    // Check if we can plant (warehouse has seeds and plot is empty)
-    const { plotIndex, seedId } = result.plant;
-    if (!SEEDS[seedId] || (warehouse[seedId] ?? 0) < 1) return;
-    
-    // Capture values to avoid stale closures
-    const capturedPlotIndex = plotIndex;
-    const capturedSeedId = seedId;
-    const capturedUpdateDeployedMachinery = result.updateDeployedMachinery;
-    
-    // Defer state updates to avoid synchronous setState in effect
-    const timeoutId = setTimeout(() => {
-      // Use functional updates to batch state changes and avoid cascading renders
-      setGrid((prev) => {
-        const next = [...prev];
-        if (next[capturedPlotIndex] !== null) return prev; // Plot already occupied
-        next[capturedPlotIndex] = { seedId: capturedSeedId, plantedAt: Date.now() };
-        return next;
-      });
+    const checkMachinery = () => {
+      // Проверяем сеялки
+      const seederResult = tickSeeders(grid, warehouse, deployedMachinery);
+      if (seederResult) {
+        const { plotIndex, seedId } = seederResult.plant;
+        if (SEEDS[seedId] && (warehouse[seedId] ?? 0) >= 1) {
+          setGrid((prev) => {
+            const next = [...prev];
+            if (next[plotIndex] !== null) return prev;
+            next[plotIndex] = { seedId, plantedAt: Date.now() };
+            return next;
+          });
+          setWarehouse((w) => ({
+            ...w,
+            [seedId]: Math.max(0, (w[seedId] ?? 0) - 1),
+          }));
+          setDeployedMachinery(seederResult.updateDeployedMachinery);
+          playSound?.("plant");
+        }
+      }
       
-      setWarehouse((w) => ({
-        ...w,
-        [capturedSeedId]: Math.max(0, (w[capturedSeedId] ?? 0) - 1),
-      }));
+      // Проверяем культиваторы
+      const cultivatorResult = tickCultivators(grid, deployedMachinery);
+      if (cultivatorResult) {
+        const { plotIndex } = cultivatorResult.weed;
+        const cell = grid[plotIndex];
+        if (cell && !cell.weededAt) {
+          setGrid((prev) => {
+            const next = [...prev];
+            if (!next[plotIndex] || next[plotIndex].weededAt) return prev;
+            next[plotIndex] = { ...next[plotIndex], weededAt: Date.now() };
+            return next;
+          });
+          setDeployedMachinery(cultivatorResult.updateDeployedMachinery);
+          playSound?.("weed");
+        }
+      }
       
-      setDeployedMachinery(capturedUpdateDeployedMachinery);
+      // Проверяем разбрасыватели удобрений
+      const fertilizerResult = tickFertilizerSpreaders(grid, deployedMachinery);
+      if (fertilizerResult) {
+        const { plotIndex } = fertilizerResult.fertilize;
+        const cell = grid[plotIndex];
+        if (cell && !cell.fertilizedAt) {
+          setGrid((prev) => {
+            const next = [...prev];
+            if (!next[plotIndex] || next[plotIndex].fertilizedAt) return prev;
+            next[plotIndex] = { ...next[plotIndex], fertilizedAt: Date.now() };
+            return next;
+          });
+          setDeployedMachinery(fertilizerResult.updateDeployedMachinery);
+          playSound?.("fertilize");
+        }
+      }
       
-      // Play sound effect
-      playSound?.("plant");
-    }, 0);
-    
-    return () => clearTimeout(timeoutId);
-  }, [tick, grid, warehouse, deployedMachinery, playSound]);
-
-  /** Тик техники: культиваторы убирают сорняки с грядок */
-  useEffect(() => {
-    const result = tickCultivators(tick, grid, deployedMachinery);
-    if (!result) return;
-    
-    const { plotIndex } = result.weed;
-    const cell = grid[plotIndex];
-    if (!cell || cell.weededAt) return;
-    
-    const capturedPlotIndex = plotIndex;
-    const capturedUpdateDeployedMachinery = result.updateDeployedMachinery;
-    
-    const timeoutId = setTimeout(() => {
-      setGrid((prev) => {
-        const next = [...prev];
-        if (!next[capturedPlotIndex] || next[capturedPlotIndex].weededAt) return prev;
-        next[capturedPlotIndex] = { ...next[capturedPlotIndex], weededAt: Date.now() };
-        return next;
-      });
+      // Проверяем дождеватели
+      const irrigatorResult = tickIrrigators(grid, deployedMachinery);
+      if (irrigatorResult) {
+        const { plotIndex } = irrigatorResult.water;
+        const cell = grid[plotIndex];
+        if (cell && !cell.wateredAt) {
+          setGrid((prev) => {
+            const next = [...prev];
+            if (!next[plotIndex] || next[plotIndex].wateredAt) return prev;
+            next[plotIndex] = { ...next[plotIndex], wateredAt: Date.now() };
+            return next;
+          });
+          setDeployedMachinery(irrigatorResult.updateDeployedMachinery);
+          playSound?.("water");
+        }
+      }
       
-      setDeployedMachinery(capturedUpdateDeployedMachinery);
-      playSound?.("weed");
-    }, 0);
-    
-    return () => clearTimeout(timeoutId);
-  }, [tick, grid, deployedMachinery, playSound]);
-
-  /** Тик техники: разбрасыватели удобрений вносят удобрения на грядки */
-  useEffect(() => {
-    const result = tickFertilizerSpreaders(tick, grid, deployedMachinery);
-    if (!result) return;
-    
-    const { plotIndex } = result.fertilize;
-    const cell = grid[plotIndex];
-    if (!cell || cell.fertilizedAt) return;
-    
-    const capturedPlotIndex = plotIndex;
-    const capturedUpdateDeployedMachinery = result.updateDeployedMachinery;
-    
-    const timeoutId = setTimeout(() => {
-      setGrid((prev) => {
-        const next = [...prev];
-        if (!next[capturedPlotIndex] || next[capturedPlotIndex].fertilizedAt) return prev;
-        next[capturedPlotIndex] = { ...next[capturedPlotIndex], fertilizedAt: Date.now() };
-        return next;
-      });
+      // Проверяем комбайны
+      const harvesterResult = tickHarvesters(grid, deployedMachinery);
+      if (harvesterResult) {
+        const { plotIndex } = harvesterResult.startCollection;
+        const cell = grid[plotIndex];
+        if (cell && !cell.collectingStartedAt) {
+          const seed = SEEDS[cell.seedId];
+          if (seed) {
+            const elapsed = (Date.now() - cell.plantedAt) / 1000;
+            if (elapsed >= seed.growthSeconds) {
+              setGrid((prev) => {
+                const next = [...prev];
+                if (!next[plotIndex] || next[plotIndex].collectingStartedAt) return prev;
+                next[plotIndex] = {
+                  ...next[plotIndex],
+                  collectingStartedAt: Date.now(),
+                };
+                return next;
+              });
+              setDeployedMachinery(harvesterResult.updateDeployedMachinery);
+            }
+          }
+        }
+      }
       
-      setDeployedMachinery(capturedUpdateDeployedMachinery);
-      playSound?.("fertilize");
-    }, 0);
-    
-    return () => clearTimeout(timeoutId);
-  }, [tick, grid, deployedMachinery, playSound]);
-
-  /** Тик техники: дождеватели поливают грядки */
-  useEffect(() => {
-    const result = tickIrrigators(tick, grid, deployedMachinery);
-    if (!result) return;
-    
-    const { plotIndex } = result.water;
-    const cell = grid[plotIndex];
-    if (!cell || cell.wateredAt) return;
-    
-    const capturedPlotIndex = plotIndex;
-    const capturedUpdateDeployedMachinery = result.updateDeployedMachinery;
-    
-    const timeoutId = setTimeout(() => {
-      setGrid((prev) => {
-        const next = [...prev];
-        if (!next[capturedPlotIndex] || next[capturedPlotIndex].wateredAt) return prev;
-        next[capturedPlotIndex] = { ...next[capturedPlotIndex], wateredAt: Date.now() };
-        return next;
-      });
+      // Проверяем грузовики
+      const truckResult = tickTrucks(barn, deployedMachinery);
+      if (truckResult) {
+        const { seedId, amount } = truckResult.sellFromBarn;
+        if (SEEDS[seedId] && (barn[seedId] ?? 0) >= 1) {
+          const qty = barn[seedId] ?? 0;
+          if (qty >= 1) {
+            const toSell = Math.min(qty, Math.max(1, Math.floor(amount)));
+            if (toSell >= 1) {
+              const gain = SEEDS[seedId].sellPrice * toSell;
+              setBarn((b) => ({ ...b, [seedId]: (b[seedId] ?? 0) - toSell }));
+              setCoins((c) => c + gain);
+              setDeployedMachinery(truckResult.updateDeployedMachinery);
+              playSound?.("sell");
+            }
+          }
+        }
+      }
       
-      setDeployedMachinery(capturedUpdateDeployedMachinery);
-      playSound?.("water");
-    }, 0);
+      // Вычисляем время до следующей проверки
+      const nextCheckDelay = calculateNextCheckDelay(deployedMachinery);
+      timeoutId = setTimeout(checkMachinery, nextCheckDelay);
+    };
     
-    return () => clearTimeout(timeoutId);
-  }, [tick, grid, deployedMachinery, playSound]);
-
-  /** Тик техники: комбайны начинают сбор урожая с готовых грядок */
-  useEffect(() => {
-    const result = tickHarvesters(tick, grid, deployedMachinery);
-    if (!result) return;
+    checkMachinery();
     
-    const { plotIndex } = result.startCollection;
-    const cell = grid[plotIndex];
-    if (!cell || cell.collectingStartedAt) return;
-    
-    const seed = SEEDS[cell.seedId];
-    if (!seed) return;
-    const elapsed = (Date.now() - cell.plantedAt) / 1000;
-    if (elapsed < seed.growthSeconds) return;
-    
-    const capturedPlotIndex = plotIndex;
-    const capturedUpdateDeployedMachinery = result.updateDeployedMachinery;
-    
-    const timeoutId = setTimeout(() => {
-      setGrid((prev) => {
-        const next = [...prev];
-        if (!next[capturedPlotIndex] || next[capturedPlotIndex].collectingStartedAt) return prev;
-        next[capturedPlotIndex] = {
-          ...next[capturedPlotIndex],
-          collectingStartedAt: Date.now(),
-        };
-        return next;
-      });
-      
-      setDeployedMachinery(capturedUpdateDeployedMachinery);
-    }, 0);
-    
-    return () => clearTimeout(timeoutId);
-  }, [tick, grid, deployedMachinery]);
-
-  /** Тик техники: грузовики продают урожай из амбара */
-  useEffect(() => {
-    const result = tickTrucks(tick, barn, deployedMachinery);
-    if (!result) return;
-    
-    const { seedId, amount } = result.sellFromBarn;
-    if (!SEEDS[seedId] || (barn[seedId] ?? 0) < 1) return;
-    
-    const capturedSeedId = seedId;
-    const capturedAmount = amount;
-    const capturedUpdateDeployedMachinery = result.updateDeployedMachinery;
-    
-    const timeoutId = setTimeout(() => {
-      const qty = barn[capturedSeedId] ?? 0;
-      if (qty < 1) return;
-      const toSell = Math.min(qty, Math.max(1, Math.floor(capturedAmount)));
-      if (toSell < 1) return;
-      
-      const gain = SEEDS[capturedSeedId].sellPrice * toSell;
-      setBarn((b) => ({ ...b, [capturedSeedId]: (b[capturedSeedId] ?? 0) - toSell }));
-      setCoins((c) => c + gain);
-      setDeployedMachinery(capturedUpdateDeployedMachinery);
-      playSound?.("sell");
-    }, 0);
-    
-    return () => clearTimeout(timeoutId);
-  }, [tick, barn, deployedMachinery, playSound]);
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [grid, warehouse, barn, deployedMachinery, playSound]);
 
   const clearWeeds = useCallback((plotIndex) => {
     const cell = grid[plotIndex];
@@ -641,6 +585,152 @@ export function GameProvider({ children, playSound }) {
     return true;
   }, [farmLevel, canExpand, coins, expandCost, playSound]);
 
+  // Dev tools functions
+  const repairAllMachinery = useCallback(() => {
+    // Починить всю технику в гараже
+    setGarage((g) => {
+      const updated = {};
+      for (const id of MACHINERY_IDS) {
+        const units = g[id] ?? [];
+        updated[id] = units.map(() => ({
+          fuel: MACHINERY_MAX_FUEL,
+          integrity: MACHINERY_MAX_INTEGRITY,
+        }));
+      }
+      return updated;
+    });
+    // Починить всю технику на поле
+    setDeployedMachinery((d) => {
+      const updated = {};
+      for (const id of MACHINERY_IDS) {
+        const units = d[id] ?? [];
+        updated[id] = units.map(() => ({
+          fuel: MACHINERY_MAX_FUEL,
+          integrity: MACHINERY_MAX_INTEGRITY,
+        }));
+      }
+      return updated;
+    });
+    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred?.("medium");
+    playSound?.("buy");
+    return true;
+  }, [playSound]);
+
+  const addCoins = useCallback((amount) => {
+    setCoins((c) => c + amount);
+    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred?.("light");
+    playSound?.("buy");
+    return true;
+  }, [playSound]);
+
+  const addAllMachinery = useCallback((count) => {
+    setGarage((g) => {
+      const updated = { ...g };
+      for (const id of MACHINERY_IDS) {
+        const existing = g[id] ?? [];
+        const newUnits = Array(count).fill(null).map(() => ({
+          fuel: MACHINERY_MAX_FUEL,
+          integrity: MACHINERY_MAX_INTEGRITY,
+        }));
+        updated[id] = [...existing, ...newUnits];
+      }
+      return updated;
+    });
+    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred?.("medium");
+    playSound?.("buy");
+    return true;
+  }, [playSound]);
+
+  const addAllSeeds = useCallback((count) => {
+    setWarehouse((w) => {
+      const updated = { ...w };
+      for (const id of SEED_IDS) {
+        updated[id] = (w[id] ?? 0) + count;
+      }
+      return updated;
+    });
+    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred?.("light");
+    playSound?.("buy");
+    return true;
+  }, [playSound]);
+
+  const addCrypto = useCallback((amount) => {
+    setCrypto((c) => c + amount);
+    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred?.("light");
+    playSound?.("buy");
+    return true;
+  }, [playSound]);
+
+  const deployAllMachineryToField = useCallback(() => {
+    // Перемещаем всю технику из гаража на поле
+    setGarage((g) => {
+      const updated = { ...g };
+      const toDeploy = {};
+      
+      for (const id of MACHINERY_IDS) {
+        const units = g[id] ?? [];
+        if (units.length > 0) {
+          toDeploy[id] = units;
+          updated[id] = [];
+        }
+      }
+      
+      // Обновляем deployedMachinery отдельным вызовом
+      // React автоматически забатчит эти обновления
+      if (Object.keys(toDeploy).length > 0) {
+        setDeployedMachinery((d) => {
+          const deployedUpdated = { ...d };
+          for (const id of MACHINERY_IDS) {
+            if (toDeploy[id]) {
+              deployedUpdated[id] = [...(d[id] ?? []), ...toDeploy[id]];
+            }
+          }
+          return deployedUpdated;
+        });
+      }
+      
+      return updated;
+    });
+    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred?.("medium");
+    playSound?.("buy");
+    return true;
+  }, [playSound]);
+
+  const returnAllMachineryFromField = useCallback(() => {
+    // Возвращаем всю технику с поля в гараж
+    setDeployedMachinery((d) => {
+      const deployedUpdated = { ...d };
+      const toReturn = {};
+      
+      for (const id of MACHINERY_IDS) {
+        const units = d[id] ?? [];
+        if (units.length > 0) {
+          toReturn[id] = units;
+          deployedUpdated[id] = [];
+        }
+      }
+      
+      // Обновляем garage отдельным вызовом
+      // React автоматически забатчит эти обновления
+      if (Object.keys(toReturn).length > 0) {
+        setGarage((g) => {
+          const garageUpdated = { ...g };
+          for (const id of MACHINERY_IDS) {
+            if (toReturn[id]) {
+              garageUpdated[id] = [...(g[id] ?? []), ...toReturn[id]];
+            }
+          }
+          return garageUpdated;
+        });
+      }
+      
+      return deployedUpdated;
+    });
+    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred?.("medium");
+    playSound?.("buy");
+    return true;
+  }, [playSound]);
+
   const buyCrypto = useCallback(
     (coinsAmount) => {
       const { buyRate } = getCryptoRates();
@@ -677,7 +767,6 @@ export function GameProvider({ children, playSound }) {
 
   const value = useMemo(
     () => ({
-      tick,
       coins,
       crypto,
       grid,
@@ -719,9 +808,15 @@ export function GameProvider({ children, playSound }) {
       getCryptoRates,
       buyCrypto,
       sellCrypto,
+      repairAllMachinery,
+      addCoins,
+      addAllMachinery,
+      addAllSeeds,
+      addCrypto,
+      deployAllMachineryToField,
+      returnAllMachineryFromField,
     }),
     [
-      tick,
       coins,
       crypto,
       grid,
@@ -756,6 +851,13 @@ export function GameProvider({ children, playSound }) {
       expandFarm,
       buyCrypto,
       sellCrypto,
+      repairAllMachinery,
+      addCoins,
+      addAllMachinery,
+      addAllSeeds,
+      addCrypto,
+      deployAllMachineryToField,
+      returnAllMachineryFromField,
     ],
   );
 

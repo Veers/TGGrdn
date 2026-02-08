@@ -82,6 +82,44 @@ export function ShopPurchaseDialog({
                 +
               </button>
             </div>
+            <div className="shop-purchase-dialog__step-buttons">
+              <button
+                type="button"
+                className="shop-purchase-dialog__step-btn"
+                onClick={() => setQuantity((q) => Math.max(1, q - 100))}
+                disabled={quantity <= 1}
+                aria-label="Минус 100"
+              >
+                −100
+              </button>
+              <button
+                type="button"
+                className="shop-purchase-dialog__step-btn"
+                onClick={() => setQuantity((q) => Math.max(1, q - 10))}
+                disabled={quantity <= 1}
+                aria-label="Минус 10"
+              >
+                −10
+              </button>
+              <button
+                type="button"
+                className="shop-purchase-dialog__step-btn"
+                onClick={() => setQuantity((q) => Math.min(maxQty, q + 10))}
+                disabled={quantity >= maxQty}
+                aria-label="Плюс 10"
+              >
+                +10
+              </button>
+              <button
+                type="button"
+                className="shop-purchase-dialog__step-btn"
+                onClick={() => setQuantity((q) => Math.min(maxQty, q + 100))}
+                disabled={quantity >= maxQty}
+                aria-label="Плюс 100"
+              >
+                +100
+              </button>
+            </div>
           </div>
           <p className="shop-purchase-dialog__total">Итого: 🪙{total}</p>
         </div>

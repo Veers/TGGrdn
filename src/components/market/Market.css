@@ -221,6 +221,24 @@
   color: var(--tg-theme-text-color);
 }
 
+.market__trade-stepper-input {
+  border: none;
+  background: transparent;
+  outline: none;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.market__trade-stepper-input::-webkit-outer-spin-button,
+.market__trade-stepper-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.market__trade-stepper-input:focus {
+  background: var(--glass-bg-light);
+}
+
 .market__trade-btn {
   padding: var(--space-4) var(--space-6);
   border: none;
