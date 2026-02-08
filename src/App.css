@@ -639,6 +639,7 @@
   gap: var(--space-3);
 }
 
+.stats__timer,
 .stats__coins,
 .stats__crypto {
   display: inline-flex;
@@ -658,6 +659,12 @@
     box-shadow var(--transition-base);
 }
 
+.stats__timer {
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-md);
+}
+
+.stats__timer:hover,
 .stats__coins:hover,
 .stats__crypto:hover {
   transform: scale(var(--hover-scale));
