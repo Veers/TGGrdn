@@ -43,6 +43,8 @@ function FarmGame() {
   const { plant, garage, machineryIds } = useGame();
   const [tab, setTab] = useState("warehouse");
   const [selectedSeedId, setSelectedSeedId] = useState(null);
+  const [seedPricesOpen, setSeedPricesOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [tutorialDone, setTutorialDone] = useTutorialDone();
   const physicsEffectApiRef = useRef(null);
 
@@ -73,7 +75,7 @@ function FarmGame() {
                   </p>
                 )}
               />
-              <div className="app__left-theme">
+              <div className="app__left-actions">
                 <ThemeToggle />
                 <SoundToggle />
               </div>
@@ -111,9 +113,49 @@ function FarmGame() {
             )}
           </div>
         {tab !== "exchange" && (
-          <aside className="market-wrap">
-            <Market />
-          </aside>
+          <div className="app__right">
+            <aside className="market-wrap">
+              {seedPricesOpen && (
+                <div className="market-wrap__panel">
+                  <Market />
+                </div>
+              )}
+              <button
+                type="button"
+                className="market-wrap__toggle"
+                onClick={() => setSeedPricesOpen((v) => !v)}
+                title={seedPricesOpen ? "Свернуть цены" : "Показать цены на семена"}
+                aria-label={seedPricesOpen ? "Свернуть цены" : "Показать цены на семена"}
+              >
+                <span className="market-wrap__toggle-text">
+                  {seedPricesOpen ? "◀" : "Цены ▶"}
+                </span>
+              </button>
+            </aside>
+            <aside className="profile-wrap">
+              {profileOpen && (
+                <div className="profile-wrap__panel">
+                  <section className="panel profile-panel">
+                    <h3 className="panel__title">Профиль</h3>
+                    <p className="profile-panel__text">
+                      Здесь будет информация о вашем аккаунте, достижения и настройки.
+                    </p>
+                  </section>
+                </div>
+              )}
+              <button
+                type="button"
+                className="profile-wrap__toggle"
+                onClick={() => setProfileOpen((v) => !v)}
+                title={profileOpen ? "Свернуть профиль" : "Открыть профиль"}
+                aria-label={profileOpen ? "Свернуть профиль" : "Открыть профиль"}
+              >
+                <span className="profile-wrap__toggle-text">
+                  {profileOpen ? "◀" : "👤 ▶"}
+                </span>
+              </button>
+            </aside>
+          </div>
         )}
       </div>
       {tab !== "exchange" && <FieldMachineryBar />}

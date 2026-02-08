@@ -290,6 +290,90 @@
   color: var(--tg-theme-hint-color);
 }
 
+/* Окно покупки/продажи — по центру и адаптивно на мобильном */
+@media (max-width: 520px) {
+  .app__screen--exchange {
+    padding: var(--space-3);
+    justify-content: center;
+    min-height: 0;
+  }
+
+  .app__screen--exchange .market {
+    max-width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .market__trade {
+    gap: var(--space-3);
+    margin: 0 auto;
+    max-width: 340px;
+  }
+
+  .market__trade-block {
+    padding: var(--space-3);
+    gap: var(--space-2);
+  }
+
+  .market__trade-block-title {
+    font-size: 0.75rem;
+  }
+
+  .market__trade-stepper-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+
+  .market__trade-stepper-value,
+  .market__trade-stepper-input {
+    font-size: var(--text-sm);
+  }
+
+  .market__trade-btn {
+    padding: var(--space-3) var(--space-4);
+    font-size: var(--text-sm);
+  }
+
+  .market__balance {
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+  }
+
+  .market__balance-item {
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-sm);
+  }
+
+  .market .panel__title {
+    font-size: var(--text-base);
+  }
+
+  .market .panel__sub {
+    font-size: var(--text-xs);
+  }
+
+  .exchange-bottom {
+    gap: var(--space-3);
+  }
+
+  .market__orderbook,
+  .market__chart {
+    padding: var(--space-3);
+  }
+
+  .market__orderbook-header,
+  .market__chart-header {
+    margin-bottom: var(--space-2);
+  }
+
+  .market__orderbook-table,
+  .market__orderbook-th,
+  .market__orderbook-td {
+    font-size: 0.75rem;
+  }
+}
+
 /* График курса */
 .market__chart {
   margin-bottom: var(--space-4);

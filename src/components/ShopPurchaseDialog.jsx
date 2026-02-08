@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import "./ConfirmDialog.css";
 import "./ShopPurchaseDialog.css";
 
 /**
  * Диалог покупки с выбором количества (семена или техника).
+ * Рендерится поверх приложения через портал.
  * item: { emoji, name, cost }
  */
 export function ShopPurchaseDialog({
@@ -44,13 +46,14 @@ export function ShopPurchaseDialog({
     onClose?.();
   };
 
-  return (
+  const dialog = (
     <div
       className="confirm-dialog shop-purchase-dialog"
       role="dialog"
       aria-label="Покупка"
+      aria-modal="true"
     >
-      <div className="confirm-dialog__backdrop" onClick={handleCancel} />
+      <div className="confirm-dialog__backdrop" onClick={handleCancel} aria-hidden />
       <div className="confirm-dialog__card">
         <div className="confirm-dialog__content">
           <p className="confirm-dialog__message">
@@ -143,4 +146,6 @@ export function ShopPurchaseDialog({
       </div>
     </div>
   );
+
+  return createPortal(dialog, document.body);
 }

@@ -47,7 +47,6 @@ export function ThemeToggle() {
       >
         <span className="theme-toggle__icon">{theme.emoji}</span>
         <span className="theme-toggle__label">{theme.name}</span>
-        <span className="theme-toggle__arrow">{isOpen ? "▲" : "▼"}</span>
       </button>
       {isOpen && (
         <div className="theme-toggle__dropdown" role="menu">

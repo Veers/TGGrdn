@@ -32,27 +32,66 @@
   padding-left: 0;
 }
 
-.app__left-theme {
+/* Контейнер: тема + громкость в одну группу, по размеру вполовину от кнопки рейтинга */
+.app__left-actions {
   margin-top: var(--space-4);
   padding-left: 0;
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-1);
+}
+
+/* Кнопка рейтинга: min-width 76px, padding space-6/5 → половина: ~38px, padding меньше */
+.app__left-actions .theme-toggle__button {
+  min-width: 38px;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: var(--radius);
+  gap: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app__left-actions .theme-toggle__label,
+.app__left-actions .theme-toggle__arrow {
+  display: none;
+}
+
+/* На кнопке только луна по центру, иконку темы убираем */
+.app__left-actions .theme-toggle__icon {
+  font-size: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  line-height: 1;
+}
+
+.app__left-actions .theme-toggle__icon::after {
+  content: "🌙";
+  font-size: var(--text-lg);
+  display: block;
+  line-height: 1;
 }
 
 .sound-toggle {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   padding: 0;
   border: none;
   border-radius: var(--radius);
+  flex-shrink: 0;
   background: var(--glass-bg);
   color: var(--tg-theme-text-color);
   cursor: pointer;
-  font-size: 1.25rem;
+  font-size: 1rem;
 }
 
 .sound-toggle:hover {
@@ -253,6 +292,7 @@
 /* Режим посадки: при выборе семени на складе поле выделено, остальное затемнено */
 .app--planting-mode .app__left,
 .app--planting-mode .app__top,
+.app--planting-mode .app__right,
 .app--planting-mode .market-wrap,
 .app--planting-mode .expand-bar,
 .app--planting-mode .field-machinery-bar,
@@ -408,6 +448,59 @@
   transform: scale(var(--active-scale));
 }
 
+/* Компактный вид техники на мобильном */
+@media (max-width: 520px) {
+  .field-machinery-bar {
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    min-height: 0;
+    padding: var(--space-1) max(var(--space-3), env(safe-area-inset-right))
+      var(--space-1) max(var(--space-3), env(safe-area-inset-left));
+    font-size: 0.75rem;
+  }
+
+  .field-machinery-bar__label {
+    width: 100%;
+    font-size: 0.7rem;
+    margin-bottom: 2px;
+  }
+
+  .field-machinery-bar__list {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: var(--space-1);
+    width: 100%;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    padding-bottom: 2px;
+  }
+
+  .field-machinery-bar__item {
+    flex-shrink: 0;
+    gap: 4px;
+    padding: 4px 6px;
+  }
+
+  .field-machinery-bar__emoji {
+    font-size: 0.9rem;
+  }
+
+  .field-machinery-bar__name {
+    max-width: 52px;
+    font-size: 0.7rem;
+  }
+
+  .field-machinery-bar__params {
+    font-size: 0.65rem;
+  }
+
+  .field-machinery-bar__return {
+    padding: 2px 6px;
+    font-size: 0.65rem;
+  }
+}
+
 /* Отдельный экран (например, Биржа) */
 .app__screen {
   flex: 1;
@@ -420,10 +513,16 @@
 
 .app__screen--exchange {
   padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
 }
 
 .app__screen--exchange .market {
   margin-top: 0;
+  width: 100%;
+  max-width: 420px;
 }
 
 .app__bottom-hint {
@@ -432,6 +531,13 @@
   font-size: var(--text-sm);
   color: var(--tg-theme-hint-color);
   text-align: center;
+}
+
+.profile-panel__text {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--tg-theme-hint-color);
+  line-height: 1.5;
 }
 
 .app__bottom {
@@ -475,8 +581,50 @@
   display: none; /* Chrome, Safari, Opera */
 }
 
+/* Нижняя панель (меню) — по центру на мобильном */
+@media (max-width: 520px) {
+  .app__bottom-scroll {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-left: max(var(--space-3), env(safe-area-inset-left));
+  }
+
+  .app__bottom-scroll > * {
+    width: 100%;
+    max-width: 420px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .exchange-bottom-panel {
+    max-width: 420px;
+    margin: 0 auto;
+  }
+
+  .exchange-bottom-panel__tabs {
+    padding-bottom: var(--space-2);
+    margin-bottom: var(--space-2);
+  }
+
+  .exchange-bottom-panel__tab {
+    min-height: 40px;
+    padding: var(--space-2) var(--space-3);
+    font-size: 0.75rem;
+  }
+
+  .exchange-bottom-panel__tab-label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
 .app__top {
   flex-shrink: 0;
+  height: 15vh;
+  height: 15dvh;
+  min-height: 0;
   padding: var(--space-4) 0 var(--space-6);
   display: flex;
   justify-content: center;
@@ -550,26 +698,161 @@
   box-shadow: var(--shadow-md) !important;
 }
 
-/* ----- Market (приклеен справа к экрану) ----- */
-.market-wrap {
+/* ----- Правая колонка: цены + профиль (как цены, справа) ----- */
+.app__right {
   flex-shrink: 0;
   display: flex;
-  align-items: flex-start;
-  padding-left: 8px;
-  padding-right: env(safe-area-inset-right, 0);
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-right: var(--space-3);
+  padding-right: 0;
   padding-top: 10px;
 }
 
-.market {
-  background: var(--glass-bg);
+/* ----- Market (цены): контрастнее, текст по центру ----- */
+.market-wrap {
+  flex-shrink: 0;
+  width: 52px;
+  min-width: 52px;
+  position: relative;
+  padding-top: 0;
+}
+
+.market-wrap__panel {
+  position: absolute;
+  right: 100%;
+  top: 0;
+  z-index: 10;
+  padding-right: 8px;
+}
+
+.market-wrap__panel .market {
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+
+.market-wrap__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: var(--space-3) var(--space-2);
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.35);
   backdrop-filter: blur(var(--blur-md));
   -webkit-backdrop-filter: blur(var(--blur-md));
-  border: 1px solid var(--glass-border);
+  color: var(--tg-theme-text-color);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: all var(--transition-base);
+  box-sizing: border-box;
+}
+
+.market-wrap__toggle:hover {
+  background: rgba(0, 0, 0, 0.45);
+  border-color: rgba(255, 255, 255, 0.35);
+  transform: scale(var(--hover-scale));
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+}
+
+.market-wrap__toggle:active {
+  transform: scale(var(--active-scale));
+}
+
+.market-wrap__toggle-text {
+  display: inline-block;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.market {
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(var(--blur-md));
+  -webkit-backdrop-filter: blur(var(--blur-md));
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: var(--radius) 0 0 var(--radius);
   padding: var(--space-3) var(--space-5) var(--space-3) var(--space-4);
   min-width: 98px;
   box-sizing: border-box;
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.market .market__title,
+.market .market__heading {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.market .market__row {
+  color: var(--tg-theme-text-color);
+}
+
+.market .market__price {
+  color: var(--tg-theme-text-color);
+  font-weight: var(--font-bold);
+}
+
+/* ----- Profile wrap (как цены, справа) ----- */
+.profile-wrap {
+  flex-shrink: 0;
+  width: 52px;
+  min-width: 52px;
+  position: relative;
+}
+
+.profile-wrap__panel {
+  position: absolute;
+  right: 100%;
+  top: 0;
+  z-index: 10;
+  padding-right: 8px;
+}
+
+.profile-wrap__panel .profile-panel {
+  border-radius: var(--radius) 0 0 var(--radius);
+  min-width: 200px;
+}
+
+.profile-wrap__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: var(--space-3) var(--space-2);
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(var(--blur-md));
+  -webkit-backdrop-filter: blur(var(--blur-md));
+  color: var(--tg-theme-text-color);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: all var(--transition-base);
+  box-sizing: border-box;
+}
+
+.profile-wrap__toggle:hover {
+  background: rgba(0, 0, 0, 0.45);
+  border-color: rgba(255, 255, 255, 0.35);
+  transform: scale(var(--hover-scale));
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+}
+
+.profile-wrap__toggle:active {
+  transform: scale(var(--active-scale));
+}
+
+.profile-wrap__toggle-text {
+  display: inline-block;
+  white-space: nowrap;
+  text-align: center;
 }
 
 .market__title {
@@ -931,10 +1214,10 @@
 .tabs {
   flex-shrink: 0;
   display: flex;
-  gap: var(--space-1);
-  padding: var(--space-4) var(--space-5) var(--space-3);
+  gap: calc(var(--space-1) * 1.1);
+  padding: calc(var(--space-4) * 1.1) var(--space-5) calc(var(--space-3) * 1.1);
   padding-right: max(var(--space-5), env(safe-area-inset-right));
-  padding-bottom: max(var(--space-3), env(safe-area-inset-bottom));
+  padding-bottom: max(calc(var(--space-3) * 1.1), env(safe-area-inset-bottom));
   border-top: 1px solid var(--glass-border);
   border-bottom: none;
   position: relative;
@@ -945,13 +1228,13 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-3) var(--space-1);
+  gap: calc(var(--space-1) * 1.1);
+  padding: calc(var(--space-3) * 1.1) calc(var(--space-1) * 1.1);
   border: none;
   border-radius: var(--radius);
   background: transparent;
   color: var(--tg-theme-hint-color);
-  font-size: var(--text-sm);
+  font-size: calc(var(--text-sm) * 1.1);
   font-weight: var(--font-normal);
   cursor: pointer;
   transition: all var(--transition-base);
@@ -989,7 +1272,7 @@
 }
 
 .tabs__icon {
-  font-size: var(--text-xl);
+  font-size: calc(var(--text-xl) * 1.1);
   line-height: 1;
 }
 

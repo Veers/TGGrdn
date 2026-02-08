@@ -48,13 +48,6 @@
   font-size: var(--text-xs);
 }
 
-.theme-toggle__arrow {
-  font-size: 10px;
-  opacity: 0.7;
-  transition: transform var(--transition-base);
-  margin-top: var(--space-1);
-}
-
 .theme-toggle__dropdown {
   position: absolute;
   top: calc(100% + var(--space-2));
