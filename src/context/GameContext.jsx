@@ -64,6 +64,13 @@ export function GameProvider({ children, playSound }) {
   const [openOrders] = useState(saved?.openOrders ?? []);
   const [earningsHistory, setEarningsHistory] = useState(saved?.earningsHistory ?? []);
   const prevCoinsRef = useRef(coins);
+  const [tick, setTick] = useState(() => Date.now());
+
+  // Обновление раз в секунду, чтобы таймер созревания и прогресс перерисовывались без тапа (важно для мобильных)
+  useEffect(() => {
+    const id = setInterval(() => setTick(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   // Track earnings history - use ref to avoid synchronous setState in effect
   useEffect(() => {
@@ -767,6 +774,7 @@ export function GameProvider({ children, playSound }) {
 
   const value = useMemo(
     () => ({
+      tick,
       coins,
       crypto,
       grid,
@@ -817,6 +825,7 @@ export function GameProvider({ children, playSound }) {
       returnAllMachineryFromField,
     }),
     [
+      tick,
       coins,
       crypto,
       grid,

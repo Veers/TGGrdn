@@ -58,7 +58,7 @@ export function Plot({ index }) {
           justifyContent: 'center',
         }}
       >
-        {/* Пустой квадрат без содержимого */}
+        <span className="plot__placeholder" aria-hidden="true">+</span>
       </motion.div>
     );
   }
@@ -107,7 +107,9 @@ export function Plot({ index }) {
         justifyContent: 'center',
       }}
     >
-      {/* Пустой квадрат без содержимого */}
+      <span className="plot__crop" title={seed?.name} aria-hidden="true">
+        {seed?.emoji}
+      </span>
       {phase === "growing" && (
         <>
           <div className="plot__progress" style={{ "--progress": progress }} />

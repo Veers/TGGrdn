@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTelegram } from "./hooks/useTelegram";
-import { GameProvider, useGame } from "./context/GameContext";
+import { useGame } from "./context/GameContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { Stats } from "./components/Stats";
 import { Market } from "./components/Market";
@@ -309,12 +309,7 @@ function App() {
 }
 
 function AppWithSound() {
-  const { playSound } = useSound();
-  return (
-    <GameProvider playSound={playSound}>
-      <FarmGame />
-    </GameProvider>
-  );
+  return <FarmGame />;
 }
 
 export default App;

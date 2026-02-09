@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { TonConnectUIProvider, TonConnect, CHAIN } from "@tonconnect/ui-react";
 import { MotionConfig } from "framer-motion";
 import "./index.css";
+import { GameProvider } from "./context/GameContext";
 import App from "./App.jsx";
 
 const manifestUrl =
@@ -21,10 +22,12 @@ const connector =
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <MotionConfig reducedMotion="user">
-      <TonConnectUIProvider {...(connector ? { connector } : { manifestUrl })}>
-        <App />
-      </TonConnectUIProvider>
-    </MotionConfig>
+    <GameProvider playSound={undefined}>
+      <MotionConfig reducedMotion="user">
+        <TonConnectUIProvider {...(connector ? { connector } : { manifestUrl })}>
+          <App />
+        </TonConnectUIProvider>
+      </MotionConfig>
+    </GameProvider>
   </StrictMode>,
 );
